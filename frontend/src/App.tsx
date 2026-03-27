@@ -146,6 +146,20 @@ function hoursInMonth(monthKey: string) {
   return new Date(year, month, 0).getDate() * 24;
 }
 
+function monthSequence(fromMonth: string, toMonth: string) {
+  const result: string[] = [];
+  let current = fromMonth;
+  while (current <= toMonth) {
+    result.push(current);
+    const [year, month] = current.split("-").map(Number);
+    current =
+      month === 12
+        ? `${year + 1}-01`
+        : `${year}-${String(month + 1).padStart(2, "0")}`;
+  }
+  return result;
+}
+
 function marginalMonthlyShares(rows: MarginalResponse["rows"]) {
   const buckets = new Map<string, Record<string, number>>();
   for (const row of rows) {
@@ -215,7 +229,6 @@ function App() {
     "natural_gas"
   ]);
   const [coverageSelectedKeys, setCoverageSelectedKeys] = useState<string[]>(["solar", "wind"]);
-  const [capacitySelectedKeys, setCapacitySelectedKeys] = useState<string[]>(["solar", "wind"]);
   const [interconnectorMode, setInterconnectorMode] = useState<"net" | "imports_exports">("net");
   const [interconnectorMetric, setInterconnectorMetric] = useState<"gwh" | "pct">("gwh");
   const [selectedCountries, setSelectedCountries] = useState<string[]>(["France", "Portugal", "Morocco", "Andorra"]);
@@ -224,17 +237,16 @@ function App() {
   const [activeSection, setActiveSection] = useState("generation");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [generationFromMonth, setGenerationFromMonth] = useState("2021-01");
-  const [generationToMonth, setGenerationToMonth] = useState("2025-03");
-  const [interconnectorFromMonth, setInterconnectorFromMonth] = useState("2021-01");
-  const [interconnectorToMonth, setInterconnectorToMonth] = useState("2025-03");
-  const [coverageFromMonth, setCoverageFromMonth] = useState("2024-01");
-  const [coverageToMonth, setCoverageToMonth] = useState("2025-03");
-  const [marginalFromMonth, setMarginalFromMonth] = useState("2024-01");
-  const [marginalToMonth, setMarginalToMonth] = useState("2025-03");
-  const [systemFromMonth, setSystemFromMonth] = useState("2021-01");
-  const [systemToMonth, setSystemToMonth] = useState("2025-03");
-  const [baselineYear, setBaselineYear] = useState("2022");
+  const [generationFromMonth, setGenerationFromMonth] = useState("2019-01");
+  const [generationToMonth, setGenerationToMonth] = useState("2026-03");
+  const [interconnectorFromMonth, setInterconnectorFromMonth] = useState("2019-01");
+  const [interconnectorToMonth, setInterconnectorToMonth] = useState("2026-03");
+  const [coverageFromMonth, setCoverageFromMonth] = useState("2019-01");
+  const [coverageToMonth, setCoverageToMonth] = useState("2026-03");
+  const [marginalFromMonth, setMarginalFromMonth] = useState("2019-01");
+  const [marginalToMonth, setMarginalToMonth] = useState("2026-03");
+  const [systemFromMonth, setSystemFromMonth] = useState("2019-01");
+  const [systemToMonth, setSystemToMonth] = useState("2026-03");
 
   const coverageRangeStart = monthKeyToDateRange(coverageFromMonth, false);
   const coverageRangeEnd = monthKeyToDateRange(coverageToMonth, true);
@@ -324,14 +336,6 @@ function App() {
         return arraysEqual(current, filtered) ? current : filtered;
       }
       const fallback = generationOptions.slice(0, 4).map((option) => option.group_key);
-      return arraysEqual(current, fallback) ? current : fallback;
-    });
-    setCapacitySelectedKeys((current) => {
-      const filtered = current.filter((key) => allowed.has(key));
-      if (filtered.length > 0) {
-        return arraysEqual(current, filtered) ? current : filtered;
-      }
-      const fallback = generationOptions.slice(0, 2).map((option) => option.group_key);
       return arraysEqual(current, fallback) ? current : fallback;
     });
   }, [generationOptions]);
@@ -527,11 +531,28 @@ function App() {
   }
 
   function applyGenerationPreset(preset: "renewables" | "non_renewables" | "nuclear") {
+    const presetGroups: Record<string, string[]> = {
+      renewables: [
+        "solar",
+        "wind",
+        "hydro",
+        "pumped_hydro_generation",
+        "pumped_hydro_consumption",
+        "batteries",
+        "batteries_charge",
+        "other_renewables"
+      ],
+      non_renewables: ["natural_gas", "oil", "coal", "other_non_renewables"],
+      nuclear: ["nuclear"],
+      international_transfers: ["international_transfers"]
+    } as const;
+    const allowedGroups = new Set(presetGroups[preset]);
     const options = generationOptions.filter((option) => {
-      if (preset === "nuclear") {
-        return option.group_key === "nuclear";
+      if (technologyView === "normalized") {
+        return allowedGroups.has(option.group_key);
       }
-      return preset === "renewables" ? option.family === "renewable" : option.family === "non_renewable";
+      const mapping = metadata.technology_mappings.find((item) => item.raw_key === option.group_key);
+      return mapping ? allowedGroups.has(mapping.group_key) : false;
     });
     setGenerationSelectedKeys(options.map((option) => option.group_key));
   }
@@ -544,15 +565,16 @@ function App() {
     system: "Capacity and emissions context"
   }[activeSection];
   const activeSectionCopy = {
-    generation: "Generation mix, source shares, installed capacity, and the role of imports in balancing demand.",
+    generation: "Generation mix, rolling source trends, and the role of imports in balancing demand.",
     interconnectors: "Monthly cross-border flows by country, either as net positions or split into imports and exports.",
-    coverage: "Share of hourly intervals in which the selected sources exceed the chosen demand threshold.",
+    coverage: "Share of hourly intervals in which the selected sources exceed the chosen demand threshold. Hourly sample coverage begins in January 2024.",
     marginal: "Monthly distribution of the technologies or interconnections that set the marginal market price.",
     system: "Installed capacity scale and system emissions intensity over the selected time window."
   }[activeSection];
 
   const metricUnit = metricMode === "energy" ? "GWh" : "%";
   const interconnectorUnit = interconnectorMetric === "gwh" ? "GWh" : "%";
+  const chartMargin = { top: 28, right: 32, left: 36, bottom: 8 };
   const countryColors: Record<string, string> = {
     France: "#1d4ed8",
     Morocco: "#dc2626",
@@ -567,87 +589,17 @@ function App() {
   };
   const capacityMax = latestCapacity.reduce((max, row) => Math.max(max, row.mw), 0);
   const coverageChartData = useMemo(
-    () =>
-      (coverage?.breakdown ?? []).map((row) => ({
-        period: row.period,
-        share: (row.hours / hoursInMonth(row.period)) * 100
-      })),
-    [coverage]
+    () => {
+      const actual = new Map(
+        (coverage?.breakdown ?? []).map((row) => [row.period, (row.hours / hoursInMonth(row.period)) * 100])
+      );
+      return monthSequence(coverageFromMonth, coverageToMonth).map((period) => ({
+        period,
+        share: actual.get(period) ?? 0
+      }));
+    },
+    [coverage, coverageFromMonth, coverageToMonth]
   );
-  const generationCapacityIndexData = useMemo(() => {
-    const capacityKeys =
-      technologyView === "normalized"
-        ? capacitySelectedKeys
-        : Array.from(
-            new Set(
-              metadata.technology_mappings
-                .filter((mapping) => capacitySelectedKeys.includes(mapping.raw_key))
-                .map((mapping) => mapping.group_key)
-            )
-          );
-    const monthMap = new Map<string, { period: string; generation: number; capacity: number }>();
-    generation
-      .filter(
-        (row) =>
-          capacitySelectedKeys.includes(row.technology_key) &&
-          inMonthRange(periodKeyFromIso(row.period), generationFromMonth, generationToMonth)
-      )
-      .forEach((row) => {
-      const period = row.period.slice(0, 7);
-      const current = monthMap.get(period) ?? { period, generation: 0, capacity: 0 };
-      current.generation += row.value_gwh;
-      monthMap.set(period, current);
-    });
-    capacity
-      .filter((row) => capacityKeys.includes(row.technology_key))
-      .forEach((row) => {
-        const year = row.period.slice(0, 4);
-        for (let month = 1; month <= 12; month += 1) {
-          const period = `${year}-${String(month).padStart(2, "0")}`;
-          if (!inMonthRange(period, generationFromMonth, generationToMonth)) {
-            continue;
-          }
-          const current = monthMap.get(period) ?? { period, generation: 0, capacity: 0 };
-          current.capacity += row.mw;
-          monthMap.set(period, current);
-        }
-      });
-    const rows = Array.from(monthMap.values()).sort((left, right) => left.period.localeCompare(right.period));
-    const baselineRows = rows.filter((row) => row.period.startsWith(baselineYear));
-    const baselineGeneration =
-      baselineRows.reduce((sum, row) => sum + row.generation, 0) / Math.max(baselineRows.length, 1);
-    const baselineCapacity =
-      baselineRows.reduce((sum, row) => sum + row.capacity, 0) / Math.max(baselineRows.length, 1);
-    const indexed = rows.map((row) => ({
-      period: row.period,
-      generationIndex: baselineGeneration ? (row.generation / baselineGeneration) * 100 : 0,
-      capacityIndex: baselineCapacity ? (row.capacity / baselineCapacity) * 100 : 0
-    }));
-    return rollingAverage(indexed as Array<Record<string, string | number>>, ["generationIndex", "capacityIndex"]);
-  }, [
-    capacity,
-    generation,
-    generationFromMonth,
-    generationToMonth,
-    capacitySelectedKeys,
-    metadata.technology_mappings,
-    technologyView,
-    baselineYear
-  ]);
-  const baselineYearOptions = useMemo(() => {
-    const years = new Set<string>();
-    generationCapacityIndexData.forEach((row) => years.add(String(row.period).slice(0, 4)));
-    return Array.from(years).sort();
-  }, [generationCapacityIndexData]);
-
-  useEffect(() => {
-    if (!baselineYearOptions.length) {
-      return;
-    }
-    if (!baselineYearOptions.includes(baselineYear)) {
-      setBaselineYear(baselineYearOptions[0]);
-    }
-  }, [baselineYear, baselineYearOptions]);
 
   return (
     <div className="app-shell">
@@ -837,6 +789,7 @@ function App() {
             {activeSection === "generation" ? (
               <>
                 <ChartShell
+                  className="chart-shell-wide"
                   eyebrow="Generation mix"
                   title={periodMode === "month" ? "Monthly generation by selected source" : "12-month average generation by selected source"}
                   copy="National generation mix for the selected technologies and time window."
@@ -846,6 +799,7 @@ function App() {
                       <button onClick={() => applyGenerationPreset("renewables")}>Renewables</button>
                       <button onClick={() => applyGenerationPreset("non_renewables")}>Non-renewables</button>
                       <button onClick={() => applyGenerationPreset("nuclear")}>Nuclear</button>
+                      <button onClick={() => setGenerationSelectedKeys(["international_transfers"])}>International transfers</button>
                     </div>
                   </div>
                   <section className="selection-rail selection-rail-inline">
@@ -863,10 +817,10 @@ function App() {
                     ))}
                   </section>
                   <ResponsiveContainer width="100%" height={360}>
-                    <BarChart data={generationChartData}>
+                    <BarChart data={generationChartData} margin={chartMargin}>
                       <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                       <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" />
-                      <YAxis stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), metricUnit)} />
+                      <YAxis width={78} stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), metricUnit)} />
                       <Tooltip
                         formatter={(value: number) => tickLabel(value, metricUnit)}
                         contentStyle={{
@@ -884,15 +838,16 @@ function App() {
                 </ChartShell>
 
                 <ChartShell
+                  className="chart-shell-wide"
                   eyebrow="Selected-source share"
                   title="12-month rolling average generation for selected sources"
                   copy="Rolling 12-month average generation for the selected technologies."
                 >
                   <ResponsiveContainer width="100%" height={320}>
-                    <LineChart data={detailChartData}>
+                    <LineChart data={detailChartData} margin={chartMargin}>
                       <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                       <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" />
-                      <YAxis stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), "GWh")} />
+                      <YAxis width={78} stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), "GWh")} />
                       <Tooltip
                         formatter={(value: number) => tickLabel(value, "GWh")}
                         contentStyle={{
@@ -916,73 +871,15 @@ function App() {
                 </ChartShell>
 
                 <ChartShell
-                  eyebrow="Capacity and generation"
-                  title="Indexed installed capacity and generation"
-                  copy="12-month rolling average indexed to 100 in the selected baseline year."
-                >
-                  <div className="inline-controls">
-                    <section className="selection-rail selection-rail-inline">
-                      {generationOptions.map((option) => (
-                        <button
-                          type="button"
-                          key={`capacity-${option.group_key}`}
-                          className={`source-toggle ${capacitySelectedKeys.includes(option.group_key) ? "is-active" : ""}`}
-                          onClick={() =>
-                            setCapacitySelectedKeys((current) =>
-                              current.includes(option.group_key)
-                                ? current.length === 1
-                                  ? current
-                                  : current.filter((item) => item !== option.group_key)
-                                : [...current, option.group_key]
-                            )
-                          }
-                          style={{ "--source-color": option.color } as CSSProperties}
-                        >
-                          <span className="source-dot" />
-                          {option.group_label}
-                        </button>
-                      ))}
-                    </section>
-                    <label className="month-filter">
-                      <span>Baseline year</span>
-                      <select value={baselineYear} onChange={(event) => setBaselineYear(event.target.value)}>
-                        {baselineYearOptions.map((year) => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={generationCapacityIndexData}>
-                      <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                      <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" />
-                      <YAxis stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), "idx")} />
-                      <Tooltip
-                        formatter={(value: number) => tickLabel(value, "idx")}
-                        contentStyle={{
-                          background: "rgba(6, 12, 24, 0.92)",
-                          border: "1px solid rgba(122, 162, 255, 0.24)",
-                          borderRadius: 16
-                        }}
-                      />
-                      <Line type="monotone" dataKey="capacityIndex" stroke="#9eff8f" dot={false} strokeWidth={2.5} />
-                      <Line type="monotone" dataKey="generationIndex" stroke="#4cc9f0" dot={false} strokeWidth={2.5} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </ChartShell>
-
-                <ChartShell
                   eyebrow="Balance"
                   title="Interconnector gap versus domestic balance"
                   copy="Positive values mean international imports were needed to close the gap between demand and generation. Negative values mean net export surplus."
                 >
                   <ResponsiveContainer width="100%" height={260}>
-                    <ComposedChart data={balanceChartData}>
+                    <ComposedChart data={balanceChartData} margin={chartMargin}>
                       <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                       <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" />
-                      <YAxis stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), "GWh")} />
+                      <YAxis width={78} stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), "GWh")} />
                       <Tooltip
                         formatter={(value: number) => tickLabel(value, "GWh")}
                         contentStyle={{
@@ -1032,10 +929,10 @@ function App() {
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <ComposedChart data={exchangeChartData}>
+                <ComposedChart data={exchangeChartData} margin={chartMargin}>
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                   <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" />
-                  <YAxis stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), interconnectorUnit)} />
+                  <YAxis width={78} stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), interconnectorUnit)} />
                   <Tooltip
                     formatter={(value: number) => tickLabel(value, interconnectorUnit)}
                     contentStyle={{
@@ -1113,10 +1010,10 @@ function App() {
                 </label>
               </div>
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={coverageChartData}>
+                <BarChart data={coverageChartData} margin={chartMargin}>
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                   <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" />
-                  <YAxis stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), "%")} domain={[0, 100]} />
+                  <YAxis width={70} stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), "%")} domain={[0, 100]} />
                   <Tooltip
                     formatter={(value: number) => tickLabel(value, "%")}
                     contentStyle={{
@@ -1139,10 +1036,11 @@ function App() {
               >
               <div className="marginal-note">{marginal?.note}</div>
               <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={marginalChartData}>
+                <BarChart data={marginalChartData} margin={chartMargin}>
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                   <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" />
                   <YAxis
+                    width={70}
                     stroke="rgba(255,255,255,0.45)"
                     tickFormatter={(value) => tickLabel(Number(value), "%")}
                     domain={[0, 100]}
@@ -1200,10 +1098,10 @@ function App() {
                   copy="Monthly average system intensity, expressed in tonnes of CO2 equivalent per MWh."
                 >
                   <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={emissionsChartData}>
+                    <LineChart data={emissionsChartData} margin={chartMargin}>
                       <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                       <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" />
-                      <YAxis stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => preciseTickLabel(Number(value), "tCO2/MWh", 3)} />
+                      <YAxis width={86} stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => preciseTickLabel(Number(value), "tCO2/MWh", 2)} />
                       <Tooltip
                         formatter={(value: number) => preciseTickLabel(value, "tCO2/MWh", 3)}
                         contentStyle={{

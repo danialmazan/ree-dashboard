@@ -39,3 +39,7 @@
 - Split date filters by page, fixed the generation trend and balance chart semantics, added generation-family presets plus an independent capacity selector, changed coverage threshold updates to explicit apply, separated system context into two sections, and varied interconnector country shares by month in the sample store.
 - Files changed: `backend/app/sample_store.py`, `frontend/src/App.tsx`, `frontend/src/styles.css`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
 - Reproduce: run `python3 scripts/build_sample_store.py`, `./backend/.venv/bin/pytest`, `npm run build`, then refresh the app.
+
+- Extended the monthly sample store through March 2026, made monthly net imports vary materially so balance/interconnector charts are not flat, updated default page ranges to `2019-01` through `2026-03`, removed the capacity-generation index chart, widened the selected-source trend chart, padded the coverage timeline to the selected range, and increased chart margins / emissions-axis width to prevent clipped labels.
+- Files changed: `backend/app/sample_store.py`, `frontend/src/App.tsx`, `frontend/src/styles.css`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `python3 scripts/build_sample_store.py`, `./backend/.venv/bin/pytest`, `npm run build`, then restart the app.

@@ -35,3 +35,7 @@
 ## 2026-03-26 10:31 Europe/Madrid
 
 - Prompt: "- The interconnectors chart is not right. It's showing the same value every month ..."
+
+## 2026-03-27 09:10 Europe/Madrid
+
+- Prompt: "Okay. some changes: - Sometimes the last (top) label of the y axis is cropped in the charts. Fix this ..."

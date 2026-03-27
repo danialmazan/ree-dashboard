@@ -119,7 +119,8 @@ def _monthly_generation(period: date) -> dict[str, float]:
         + pumped_cons
         + battery_charge
     )
-    gas = max(1400, demand - non_dispatchable - 150)
+    target_net_imports = 210 + _sin(seasonal, 540, -0.4) + _sin(year_index * 0.8, 120, 0.3)
+    gas = max(1400, demand - non_dispatchable - target_net_imports)
     cogeneration = gas * 0.22
     peaker = gas * 0.08
     combined_cycle = gas - cogeneration - peaker
@@ -357,7 +358,7 @@ def _hourly_rows(start: datetime, end: datetime) -> tuple[list[dict[str, Any]], 
 
 
 def build_store() -> dict[str, Any]:
-    months = _month_range(date(2019, 1, 1), date(2025, 12, 1))
+    months = _month_range(date(2019, 1, 1), date(2026, 3, 1))
     generation_period: list[dict[str, Any]] = []
     demand_period: list[dict[str, Any]] = []
     exchange_period: list[dict[str, Any]] = []
@@ -411,7 +412,7 @@ def build_store() -> dict[str, Any]:
         )
         emissions_period.extend(_emissions_rows(period, monthly))
 
-    for year in range(2019, 2026):
+    for year in range(2019, 2027):
         capacity_period.extend(_capacity_rows(year))
 
     hourly_generation, marginal_rows = _hourly_rows(datetime(2024, 1, 1, 0, 0), datetime(2025, 3, 18, 23, 0))
@@ -422,13 +423,13 @@ def build_store() -> dict[str, Any]:
             "subtitle": "Sample local analytics store wired for REE/OMIE-style exploration",
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "marginal_cutoff": MARGINAL_CUTOFF.isoformat(),
-            "available_years": list(range(2019, 2026)),
+            "available_years": list(range(2019, 2027)),
             "available_modules": {
-                "generation": {"start": "2019-01-01", "end": "2025-12-01"},
-                "demand": {"start": "2019-01-01", "end": "2025-12-01"},
-                "exchanges": {"start": "2019-01-01", "end": "2025-12-01"},
-                "capacity": {"start": "2019-01-01", "end": "2025-01-01"},
-                "emissions": {"start": "2019-01-01", "end": "2025-12-01"},
+                "generation": {"start": "2019-01-01", "end": "2026-03-01"},
+                "demand": {"start": "2019-01-01", "end": "2026-03-01"},
+                "exchanges": {"start": "2019-01-01", "end": "2026-03-01"},
+                "capacity": {"start": "2019-01-01", "end": "2026-01-01"},
+                "emissions": {"start": "2019-01-01", "end": "2026-03-01"},
                 "hourly_stats": {"start": "2024-01-01T00:00:00", "end": "2025-03-18T23:00:00"},
                 "marginal_technology": {"start": "2024-01-01T00:00:00", "end": MARGINAL_CUTOFF.isoformat()},
             },
