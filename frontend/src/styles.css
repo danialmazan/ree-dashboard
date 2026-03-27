@@ -1,0 +1,458 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+:root {
+  color-scheme: dark;
+  font-family: "Space Grotesk", "Avenir Next", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(0, 182, 255, 0.18), transparent 30%),
+    radial-gradient(circle at 80% 20%, rgba(185, 255, 111, 0.12), transparent 24%),
+    linear-gradient(180deg, #040816 0%, #07111f 48%, #030711 100%);
+  color: #f7fbff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #030711;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.ambient {
+  position: fixed;
+  inset: auto;
+  border-radius: 999px;
+  filter: blur(80px);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.ambient-a {
+  width: 26rem;
+  height: 26rem;
+  top: -6rem;
+  right: 12rem;
+  background: rgba(76, 201, 240, 0.22);
+}
+
+.ambient-b {
+  width: 18rem;
+  height: 18rem;
+  bottom: 8rem;
+  left: 22rem;
+  background: rgba(183, 255, 110, 0.12);
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 2rem 1.4rem;
+  backdrop-filter: blur(22px);
+}
+
+.sidebar {
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(5, 10, 20, 0.95), rgba(4, 9, 18, 0.76));
+}
+
+.brand-block h1,
+.stage-header h2,
+.chart-header h2 {
+  margin: 0;
+  letter-spacing: -0.05em;
+}
+
+.brand-block h1 {
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 0.92;
+  max-width: 10ch;
+}
+
+.support-copy,
+.lead,
+.chart-header p,
+.minor-copy,
+.sidebar-footer p,
+.source-list span {
+  color: rgba(228, 240, 255, 0.68);
+}
+
+.eyebrow {
+  margin: 0 0 0.65rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8cb9ff;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 2rem 0;
+}
+
+.nav-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  background: transparent;
+  color: rgba(247, 251, 255, 0.76);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.nav-button span {
+  position: relative;
+  z-index: 1;
+}
+
+.nav-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(108, 150, 255, 0.22), rgba(76, 201, 240, 0.14));
+  border: 1px solid rgba(124, 162, 255, 0.26);
+}
+
+.main-stage {
+  padding: 1.75rem 1.5rem 2rem;
+  overflow: auto;
+}
+
+.stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 0.5rem 0 1.5rem;
+}
+
+.stage-header h2 {
+  font-size: clamp(2.1rem, 4vw, 4.3rem);
+  line-height: 0.95;
+  max-width: 12ch;
+}
+
+.lead {
+  max-width: 62ch;
+  font-size: 1rem;
+}
+
+.toolbar,
+.inline-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.month-filter {
+  display: grid;
+  gap: 0.35rem;
+  color: rgba(243, 248, 255, 0.72);
+}
+
+.month-filter span {
+  font-size: 0.8rem;
+}
+
+.month-filter input,
+.month-filter select {
+  border: 1px solid rgba(124, 162, 255, 0.16);
+  border-radius: 999px;
+  padding: 0.55rem 0.8rem;
+  background: rgba(3, 8, 18, 0.76);
+  color: #f7fbff;
+}
+
+.apply-button {
+  border: 1px solid rgba(124, 162, 255, 0.16);
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: rgba(3, 8, 18, 0.76);
+  color: #f7fbff;
+  cursor: pointer;
+}
+
+.segmented-control {
+  display: inline-flex;
+  padding: 0.25rem;
+  border: 1px solid rgba(124, 162, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(3, 8, 18, 0.76);
+}
+
+.segmented-control button {
+  border: 0;
+  color: rgba(243, 248, 255, 0.7);
+  background: transparent;
+  padding: 0.6rem 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.segmented-control button.is-active {
+  color: #f7fbff;
+  background: linear-gradient(90deg, rgba(115, 157, 255, 0.18), rgba(76, 201, 240, 0.1));
+}
+
+.selection-rail {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.source-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(7, 15, 28, 0.7);
+  color: rgba(247, 251, 255, 0.78);
+  cursor: pointer;
+}
+
+.source-toggle.is-active {
+  border-color: color-mix(in srgb, var(--source-color) 60%, rgba(255, 255, 255, 0.18));
+  background: color-mix(in srgb, var(--source-color) 16%, rgba(7, 15, 28, 0.86));
+  color: #fff;
+}
+
+.source-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: var(--source-color);
+  box-shadow: 0 0 20px var(--source-color);
+}
+
+.stage-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.chart-shell {
+  grid-column: span 6;
+  position: relative;
+  padding: 1.2rem 1.2rem 1rem;
+  background:
+    linear-gradient(180deg, rgba(9, 17, 33, 0.82), rgba(5, 10, 21, 0.62)),
+    linear-gradient(120deg, rgba(78, 97, 255, 0.08), transparent 45%);
+  border: 1px solid rgba(124, 162, 255, 0.12);
+  border-radius: 28px;
+  min-height: 19rem;
+}
+
+.chart-shell:first-child {
+  grid-column: span 12;
+}
+
+.chart-header {
+  margin-bottom: 1rem;
+  max-width: 56ch;
+}
+
+.chart-body {
+  min-height: 16rem;
+}
+
+.sources-footer,
+.chart-shell:last-child {
+  grid-column: span 12;
+}
+
+.loading-state {
+  padding: 4rem 0;
+  color: rgba(247, 251, 255, 0.72);
+}
+
+.error-state {
+  display: grid;
+  gap: 0.9rem;
+  max-width: 48rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(36, 13, 16, 0.92), rgba(18, 6, 8, 0.76));
+}
+
+.error-state h3,
+.error-state p {
+  margin: 0;
+}
+
+.error-state pre,
+.error-state code {
+  font-family: "IBM Plex Mono", monospace;
+  white-space: pre-wrap;
+}
+
+.error-state pre {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.24);
+  color: #ffd8d8;
+}
+
+.error-state code {
+  display: inline-block;
+  padding: 0.8rem 1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.coverage-topline {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.big-number {
+  display: block;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+}
+
+.slider-wrap {
+  display: grid;
+  gap: 0.5rem;
+  min-width: min(100%, 18rem);
+}
+
+.slider-wrap input {
+  width: 100%;
+}
+
+.marginal-note {
+  margin-bottom: 0.85rem;
+  color: rgba(247, 251, 255, 0.72);
+}
+
+.dual-mini-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.subheading {
+  margin: 0 0 0.75rem;
+  color: rgba(247, 251, 255, 0.76);
+}
+
+.mini-table {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.mini-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.capacity-value {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 13rem;
+}
+
+.capacity-bar-track {
+  width: 7rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.capacity-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #67e8f9, #9eff8f);
+}
+
+.sources-footer {
+  padding-top: 0.5rem;
+}
+
+.source-list-inline {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.source-footnote {
+  display: grid;
+  gap: 0.15rem;
+  color: rgba(228, 240, 255, 0.72);
+}
+
+@media (max-width: 1200px) {
+  .app-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: relative;
+    height: auto;
+    border: 0;
+  }
+
+  .stage-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chart-shell,
+  .chart-shell:first-child,
+  .chart-shell:last-child {
+    grid-column: span 12;
+  }
+
+  .dual-mini-grid {
+    grid-template-columns: 1fr;
+  }
+}

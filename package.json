@@ -1,0 +1,13 @@
+{
+  "name": "test_ree",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "start": "node scripts/dev.mjs",
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "api:dev": "backend/.venv/bin/uvicorn app.main:app --app-dir backend --reload",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build"
+  }
+}

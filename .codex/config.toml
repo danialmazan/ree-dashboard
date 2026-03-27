@@ -1,0 +1,5 @@
+# .codex/config.toml
+# Treat these repo docs as instruction sources (in addition to AGENTS*.md).
+project_doc_fallback_filenames = [
+ "CODEX_OPERATING_MODE.md"
+]

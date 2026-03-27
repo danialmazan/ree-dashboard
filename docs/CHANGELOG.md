@@ -1,0 +1,41 @@
+# Changelog
+
+## 2026-03-25
+
+- Implemented the first Spain electricity dashboard MVP scaffold with a FastAPI backend, generated local analytics store, React/Vite frontend shell, and repo run documentation.
+- Files changed: `backend/`, `frontend/`, `scripts/build_sample_store.py`, `README.md`, `docs/RUNBOOK.md`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`, `.gitignore`.
+- Reproduce: install backend/frontend dependencies, run `python3 scripts/build_sample_store.py`, start `uvicorn app.main:app --reload`, then `npm run dev`.
+
+## 2026-03-26
+
+- Added a repo-root `package.json` so `npm run dev` and `npm run build` work from the project root by forwarding to the frontend app.
+- Files changed: `package.json`, `README.md`, `docs/RUNBOOK.md`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: from the repo root run `npm run dev` or `npm run build`.
+
+- Added frontend API error handling so the dashboard shows a visible backend-start message instead of hanging on "Loading local analytics store…", and added a repo-root `npm run api:dev` script.
+- Files changed: `frontend/src/App.tsx`, `frontend/src/styles.css`, `package.json`, `README.md`, `docs/RUNBOOK.md`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: stop the backend, load the frontend, and confirm the error state appears; then run `npm run api:dev`.
+
+- Fixed the `/api/exchanges` monthly net path so interconnector requests return `value_gwh` instead of crashing with `KeyError: 'net_imports_gwh'`, and added a regression test for that endpoint.
+- Files changed: `backend/app/repository.py`, `backend/tests/test_api.py`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `./backend/.venv/bin/pytest`, then start the API and load the dashboard with the interconnectors panel requesting `direction=net`.
+
+- Restructured the dashboard into page-based sections, added top-level month-range filtering, converted the national mix to monthly stacked bars / 12-month averages, changed marginal technology to monthly percentage shares, removed the right-side panel, and updated chart formatting and capacity bars.
+- Files changed: `frontend/src/App.tsx`, `frontend/src/components/Sidebar.tsx`, `frontend/src/api.ts`, `frontend/src/styles.css`, `backend/app/main.py`, `backend/app/repository.py`, `backend/tests/test_api.py`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `./backend/.venv/bin/pytest`, run `npm run build`, then open the app with `npm run dev` and `npm run api:dev`.
+
+- Split page-specific source selectors so generation and coverage no longer share the same selection state, moved the generation selector into the generation chart block, and corrected the 12-month mode to use monthly data with a rolling 12-month average instead of annual backend totals.
+- Files changed: `frontend/src/App.tsx`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `npm run build`, open the app, compare source selections across pages, and switch the main chart between `Monthly` and `12M average`.
+
+- Refined page-specific controls and semantics: signed import-gap bars in the balance chart, interconnector `Net` vs `Imports / exports` modes with country multi-select and net total line, indexed capacity vs generation chart on the generation page, percentage-based coverage breakdowns, fixed marginal-tech stack/axis behavior, and higher-precision CO2 intensity labels.
+- Files changed: `frontend/src/App.tsx`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `./backend/.venv/bin/pytest`, run `npm run build`, then inspect the generation, interconnectors, coverage, marginal, and system pages in the browser.
+
+- Added a single-command local launcher so the dashboard can be started from one terminal with `npm start`, which runs both the backend and frontend and shuts both down on `Ctrl+C`.
+- Files changed: `scripts/dev.mjs`, `package.json`, `README.md`, `docs/RUNBOOK.md`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: from the repo root run `npm start`.
+
+- Split date filters by page, fixed the generation trend and balance chart semantics, added generation-family presets plus an independent capacity selector, changed coverage threshold updates to explicit apply, separated system context into two sections, and varied interconnector country shares by month in the sample store.
+- Files changed: `backend/app/sample_store.py`, `frontend/src/App.tsx`, `frontend/src/styles.css`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `python3 scripts/build_sample_store.py`, `./backend/.venv/bin/pytest`, `npm run build`, then refresh the app.

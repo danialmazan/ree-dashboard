@@ -1,0 +1,34 @@
+# ---- OS junk ----
+.DS_Store
+
+# ---- R / RStudio ----
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# ---- renv ----
+renv/library/
+renv/python/
+renv/staging/
+
+# ---- Data (usually private / large) ----
+data/
+
+# ---- Outputs (keep repo clean) ----
+output/
+!output/publish/
+!output/publish/**
+
+# ---- JS / Python build artifacts ----
+node_modules/
+dist/
+*.tsbuildinfo
+.venv/
+__pycache__/
+.pytest_cache/
+
+# ---- Quarto ----
+.quarto/
+*_files/
+_site/
