@@ -9,6 +9,8 @@ from typing import Any
 
 STORE_PATH = Path(__file__).resolve().parents[1] / "data" / "sample_store.json"
 MARGINAL_CUTOFF = datetime(2025, 3, 18, 23, 0)
+HOURLY_SAMPLE_START = datetime(2019, 1, 1, 0, 0)
+HOURLY_SAMPLE_END = datetime(2026, 3, 31, 23, 0)
 
 
 @dataclass(frozen=True)
@@ -173,32 +175,66 @@ def _monthly_generation(period: date) -> dict[str, float]:
 
 
 def _exchange_rows(period: date, net_imports: float) -> list[dict[str, Any]]:
-    countries = ["France", "Portugal", "Morocco", "Andorra"]
     seasonal = math.tau * ((period.month - 1) / 12)
-    raw_weights = [
-        0.46 + 0.06 * math.sin(seasonal + 0.2),
-        0.34 + 0.05 * math.sin(seasonal + 2.1),
-        0.15 + 0.04 * math.sin(seasonal + 4.0),
-        0.05 + 0.02 * math.sin(seasonal + 1.2),
-    ]
-    total_weight = sum(raw_weights)
-    weights = [weight / total_weight for weight in raw_weights]
+    year_index = period.year - 2019
+    gross_profiles = {
+        "France": {
+            "base": 430,
+            "swing": 170,
+            "phase": 0.2,
+            "bidirectional": 115,
+            "gross_scale": 1.15,
+        },
+        "Portugal": {
+            "base": 300,
+            "swing": 105,
+            "phase": 2.1,
+            "bidirectional": 75,
+            "gross_scale": 0.95,
+        },
+        "Morocco": {
+            "base": 115,
+            "swing": 46,
+            "phase": 4.0,
+            "bidirectional": 28,
+            "gross_scale": 0.65,
+        },
+        "Andorra": {
+            "base": 34,
+            "swing": 12,
+            "phase": 1.2,
+            "bidirectional": 9,
+            "gross_scale": 0.22,
+        },
+    }
+    raw_weights = {
+        "France": 0.46 + 0.06 * math.sin(seasonal + 0.2),
+        "Portugal": 0.34 + 0.05 * math.sin(seasonal + 2.1),
+        "Morocco": 0.15 + 0.04 * math.sin(seasonal + 4.0),
+        "Andorra": 0.05 + 0.02 * math.sin(seasonal + 1.2),
+    }
+    total_weight = sum(raw_weights.values())
+    net_targets = {country: net_imports * (weight / total_weight) for country, weight in raw_weights.items()}
     rows = []
-    for country, weight in zip(countries, weights):
-        net = net_imports * weight
-        if net >= 0:
-            imports = net * 1.18
-            exports = imports - net
-        else:
-            exports = abs(net) * 1.22
-            imports = exports + net
+    for country, profile in gross_profiles.items():
+        monthly_pulse = profile["base"] + profile["swing"] * math.sin(seasonal + profile["phase"])
+        structural_growth = year_index * profile["bidirectional"] * 0.18
+        gross_total = max(0.0, monthly_pulse * profile["gross_scale"] + structural_growth)
+        net = net_targets[country]
+        if country == "France" and period.year in {2022, 2023}:
+            france_export_push = 165 + 60 * math.sin(seasonal - 0.45)
+            if period.month in {3, 4, 5, 6, 7, 8, 9, 10}:
+                net -= france_export_push
+        half_gross = gross_total / 2
+        imports = max(0.0, half_gross + (net / 2))
+        exports = max(0.0, half_gross - (net / 2))
         rows.append(
             {
                 "period": period.isoformat(),
                 "country": country,
-                "imports_gwh": _round(max(0, imports)),
-                "exports_gwh": _round(max(0, exports)),
-                "net_imports_gwh": _round(net),
+                "imports_gwh": _round(imports),
+                "exports_gwh": _round(exports),
+                "net_imports_gwh": _round(imports - exports),
             }
         )
     return rows
@@ -335,24 +371,23 @@ def _hourly_rows(start: datetime, end: datetime) -> tuple[list[dict[str, Any]], 
                     "demand_mwh": _round(demand_mwh),
                 }
             )
-        if current <= MARGINAL_CUTOFF:
-            if solar + wind > demand_mwh * 0.72:
-                tech = "Hydro"
-            elif gas > 6500:
-                tech = "Combined cycle"
-            elif current.hour in {7, 8, 19, 20, 21}:
-                tech = "Combined cycle"
-            elif hydro > 2200:
-                tech = "Hydro"
-            else:
-                tech = "Interconnections"
-            marginal_rows.append(
-                {
-                    "timestamp": current.isoformat(),
-                    "technology_label": tech,
-                    "availability_status": "available",
-                }
-            )
+        if solar + wind > demand_mwh * 0.72:
+            tech = "Hydro"
+        elif gas > 6500:
+            tech = "Combined cycle"
+        elif current.hour in {7, 8, 19, 20, 21}:
+            tech = "Combined cycle"
+        elif hydro > 2200:
+            tech = "Hydro"
+        else:
+            tech = "Interconnections"
+        marginal_rows.append(
+            {
+                "timestamp": current.isoformat(),
+                "technology_label": tech,
+                "availability_status": "available",
+            }
+        )
         current += timedelta(hours=1)
     return generation_rows, marginal_rows
 
@@ -415,7 +450,7 @@ def build_store() -> dict[str, Any]:
     for year in range(2019, 2027):
         capacity_period.extend(_capacity_rows(year))
 
-    hourly_generation, marginal_rows = _hourly_rows(datetime(2024, 1, 1, 0, 0), datetime(2025, 3, 18, 23, 0))
+    hourly_generation, marginal_rows = _hourly_rows(HOURLY_SAMPLE_START, HOURLY_SAMPLE_END)
 
     return {
         "metadata": {
@@ -430,8 +465,8 @@ def build_store() -> dict[str, Any]:
                 "exchanges": {"start": "2019-01-01", "end": "2026-03-01"},
                 "capacity": {"start": "2019-01-01", "end": "2026-01-01"},
                 "emissions": {"start": "2019-01-01", "end": "2026-03-01"},
-                "hourly_stats": {"start": "2024-01-01T00:00:00", "end": "2025-03-18T23:00:00"},
-                "marginal_technology": {"start": "2024-01-01T00:00:00", "end": MARGINAL_CUTOFF.isoformat()},
+                "hourly_stats": {"start": HOURLY_SAMPLE_START.isoformat(), "end": HOURLY_SAMPLE_END.isoformat()},
+                "marginal_technology": {"start": HOURLY_SAMPLE_START.isoformat(), "end": HOURLY_SAMPLE_END.isoformat()},
             },
             "sources": [
                 {
@@ -439,8 +474,8 @@ def build_store() -> dict[str, Any]:
                     "description": "Generation, demand, exchanges, balance, capacity, and emissions inspired schema.",
                 },
                 {
-                    "name": "OMIE market results",
-                    "description": "Hourly marginal-price-setting technology through 2025-03-18 only.",
+                    "name": "Synthetic market-shaping sample",
+                    "description": "Hourly marginal-price-setting technology sample generated across the full 2019-2026 horizon.",
                 },
             ],
         },

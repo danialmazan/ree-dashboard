@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from .sample_store import MARGINAL_CUTOFF, ensure_store
+from .sample_store import HOURLY_SAMPLE_END, HOURLY_SAMPLE_START, MARGINAL_CUTOFF, ensure_store
 
 
 def _month_to_year(period: str) -> str:
@@ -242,10 +242,10 @@ class StoreRepository:
         current = start_dt
         while current <= end_dt:
             timestamp = current.isoformat()
-            if current <= MARGINAL_CUTOFF and timestamp in available_lookup:
+            if timestamp in available_lookup:
                 rows.append(available_lookup[timestamp])
             else:
-                status = "out_of_range" if current < datetime(2024, 1, 1, 0, 0) else "not_available_from_source"
+                status = "out_of_range" if current < HOURLY_SAMPLE_START or current > HOURLY_SAMPLE_END else "not_available_from_source"
                 rows.append(
                     {
                         "timestamp": timestamp,
@@ -259,5 +259,5 @@ class StoreRepository:
             "end": end_dt.isoformat(),
             "cutoff": MARGINAL_CUTOFF.isoformat(),
             "rows": rows,
-            "note": "OMIE notes that marginal-price-setting technology is not obtainable after 2025-03-18 with the new offer typology.",
+            "note": "Synthetic marginal-price-setting technology is available across the full sample horizon. The OMIE cutoff remains metadata only for future live ingestion.",
         }

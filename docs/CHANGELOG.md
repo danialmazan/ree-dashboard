@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-03-27
+
+- Fixed the interconnector split chart so export bars use their own negative stack instead of sharing the import stack, which makes exports render from zero down to their full absolute magnitude rather than collapsing toward the net line.
+- Files changed: `frontend/src/App.tsx`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `npm run build`, open the interconnectors page in `Imports / exports` mode, and verify that a month like `2022-10` shows France near `+79` for imports, `-286` for exports, and the white net line near `-207`.
+
+- Fixed the interconnector split-mode tooltip so export series are displayed as absolute values while still rendering below zero on the chart, which avoids reading export magnitudes as negative net values.
+- Files changed: `frontend/src/App.tsx`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `npm run build`, open the interconnectors page in `Imports / exports` mode, and hover a month with exports to confirm the tooltip shows export magnitudes without a minus sign.
+
+- Extended the synthetic hourly sample store so coverage and marginal-technology data now span 2019-01 through 2026-03 instead of only a short 2024-2025 window, and updated the dashboard copy/docs to match.
+- Files changed: `backend/app/sample_store.py`, `backend/app/repository.py`, `backend/tests/test_api.py`, `frontend/src/App.tsx`, `README.md`, `docs/RUNBOOK.md`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `python3 scripts/build_sample_store.py`, `./backend/.venv/bin/pytest`, `npm run build`, then query coverage or marginal technology for 2019 and 2026 months in the dashboard.
+
+- Widened the generation-page balance chart plus the system-page capacity and emissions cards, stopped rendering out-of-window coverage months as fake zero bars, added explicit sample-data availability notes, and made sample interconnector imports/exports more realistic than a direct transform of net balance.
+- Files changed: `backend/app/sample_store.py`, `backend/tests/test_api.py`, `frontend/src/App.tsx`, `frontend/src/styles.css`, `README.md`, `docs/RUNBOOK.md`, `docs/CHANGELOG.md`, `docs/PROMPT_LOG.md`.
+- Reproduce: run `python3 scripts/build_sample_store.py`, `./backend/.venv/bin/pytest`, `npm run build`, then restart the dashboard and inspect the generation, interconnectors, coverage, marginal, and system pages.
+
 ## 2026-03-25
 
 - Implemented the first Spain electricity dashboard MVP scaffold with a FastAPI backend, generated local analytics store, React/Vite frontend shell, and repo run documentation.

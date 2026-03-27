@@ -9,7 +9,7 @@ The repo contains:
 - `scripts/build_sample_store.py`: generates a local sample dataset shaped for REE and OMIE-style ingestion.
 - `docs/RUNBOOK.md`: reproducible local run steps.
 
-This first implementation ships a working local MVP with sample precomputed data and a canonical technology mapping. The architecture is ready to replace the sample generator with live REE/OMIE ingestion.
+This implementation ships a working local MVP with synthetic precomputed sample data and a canonical technology mapping. The architecture is ready to replace the sample generator with live REE/OMIE ingestion, but the current dashboard should not be read as historical truth.
 
 ## Run
 
@@ -53,5 +53,6 @@ This command now works from the repo root. If you prefer, `cd frontend && npm ru
 ## Current data behavior
 
 - Generation, demand, exchanges, capacity, balance, and emissions are served from a generated local sample store.
-- Marginal technology is available hourly through `2025-03-18T23:00:00` and marked unavailable afterwards.
-- Coverage stats are calculated from hourly source-combination data in the store.
+- Interconnector imports/exports are synthetic gross-flow examples constrained to the sample net balance; they are not historical bilateral series.
+- Coverage stats are calculated from hourly sample data that spans `2019-01-01T00:00:00` through `2026-03-31T23:00:00`.
+- Marginal technology is also generated hourly across that same synthetic sample window.

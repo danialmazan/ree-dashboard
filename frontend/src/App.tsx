@@ -113,6 +113,11 @@ function preciseTickLabel(value: number, unit: string, digits = 3) {
   return `${formatNumber(value, digits)}${unit ? ` ${unit}` : ""}`;
 }
 
+function interconnectorTooltipLabel(value: number, unit: string, dataKey: string) {
+  const displayValue = dataKey.endsWith(" exports") ? Math.abs(value) : value;
+  return tickLabel(displayValue, unit);
+}
+
 function monthKeyToDateRange(monthKey: string, endOfMonth = false) {
   const [year, month] = monthKey.split("-").map(Number);
   const day = endOfMonth ? new Date(year, month, 0).getDate() : 1;
@@ -122,6 +127,17 @@ function monthKeyToDateRange(monthKey: string, endOfMonth = false) {
 
 function periodKeyFromIso(value: string) {
   return value.slice(0, 7);
+}
+
+function moduleMonthBounds(metadata: MetadataResponse, moduleKey: string) {
+  const window = metadata.available_modules[moduleKey];
+  if (!window) {
+    return null;
+  }
+  return {
+    start: periodKeyFromIso(window.start),
+    end: periodKeyFromIso(window.end)
+  };
 }
 
 function inMonthRange(value: string, fromMonth: string, toMonth: string) {
@@ -567,8 +583,8 @@ function App() {
   const activeSectionCopy = {
     generation: "Generation mix, rolling source trends, and the role of imports in balancing demand.",
     interconnectors: "Monthly cross-border flows by country, either as net positions or split into imports and exports.",
-    coverage: "Share of hourly intervals in which the selected sources exceed the chosen demand threshold. Hourly sample coverage begins in January 2024.",
-    marginal: "Monthly distribution of the technologies or interconnections that set the marginal market price.",
+    coverage: "Share of hourly intervals in which the selected sources exceed the chosen demand threshold across the full synthetic sample horizon.",
+    marginal: "Monthly distribution of the technologies or interconnections that set the marginal market price across the full synthetic sample horizon.",
     system: "Installed capacity scale and system emissions intensity over the selected time window."
   }[activeSection];
 
@@ -590,16 +606,19 @@ function App() {
   const capacityMax = latestCapacity.reduce((max, row) => Math.max(max, row.mw), 0);
   const coverageChartData = useMemo(
     () => {
+      const hourlyBounds = moduleMonthBounds(metadata, "hourly_stats");
       const actual = new Map(
         (coverage?.breakdown ?? []).map((row) => [row.period, (row.hours / hoursInMonth(row.period)) * 100])
       );
       return monthSequence(coverageFromMonth, coverageToMonth).map((period) => ({
         period,
-        share: actual.get(period) ?? 0
+        share: hourlyBounds && !inMonthRange(period, hourlyBounds.start, hourlyBounds.end) ? null : (actual.get(period) ?? 0)
       }));
     },
-    [coverage, coverageFromMonth, coverageToMonth]
+    [coverage, coverageFromMonth, coverageToMonth, metadata]
   );
+  const coverageAvailability = useMemo(() => moduleMonthBounds(metadata, "hourly_stats"), [metadata]);
+  const marginalAvailability = useMemo(() => moduleMonthBounds(metadata, "marginal_technology"), [metadata]);
 
   return (
     <div className="app-shell">
@@ -871,6 +890,7 @@ function App() {
                 </ChartShell>
 
                 <ChartShell
+                  className="chart-shell-wide"
                   eyebrow="Balance"
                   title="Interconnector gap versus domestic balance"
                   copy="Positive values mean international imports were needed to close the gap between demand and generation. Negative values mean net export surplus."
@@ -934,7 +954,9 @@ function App() {
                   <XAxis dataKey="period" stroke="rgba(255,255,255,0.45)" />
                   <YAxis width={78} stroke="rgba(255,255,255,0.45)" tickFormatter={(value) => tickLabel(Number(value), interconnectorUnit)} />
                   <Tooltip
-                    formatter={(value: number) => tickLabel(value, interconnectorUnit)}
+                    formatter={(value: number, name: string) =>
+                      interconnectorTooltipLabel(value, interconnectorUnit, String(name))
+                    }
                     contentStyle={{
                       background: "rgba(6, 12, 24, 0.92)",
                       border: "1px solid rgba(122, 162, 255, 0.24)",
@@ -949,11 +971,11 @@ function App() {
                     : Object.entries(countryColors)
                         .filter(([country]) => selectedCountries.includes(country))
                         .flatMap(([country, color]) => [
-                          <Bar key={`${country}-imports`} dataKey={`${country} imports`} stackId="exchange" fill={color} />,
+                          <Bar key={`${country}-imports`} dataKey={`${country} imports`} stackId="exchange-imports" fill={color} />,
                           <Bar
                             key={`${country}-exports`}
                             dataKey={`${country} exports`}
-                            stackId="exchange"
+                            stackId="exchange-exports"
                             fill={color}
                             fillOpacity={0.45}
                           />
@@ -970,6 +992,9 @@ function App() {
                 title="Hours where the selected set exceeded the threshold"
                 copy="Monthly count and share of hourly intervals in which the selected sources covered at least the chosen share of demand."
               >
+              <div className="availability-note">
+                Hourly coverage in this sample store runs from {coverageAvailability?.start ?? "N/A"} to {coverageAvailability?.end ?? "N/A"}.
+              </div>
               <section className="selection-rail selection-rail-inline">
                 {metadata.technology_groups.map((option) => (
                   <button
@@ -1034,7 +1059,10 @@ function App() {
                 title="Monthly share of hours setting the marginal price"
                 copy="Interconnections means imported offers set the marginal Spanish price in that hour. The chart shows each series as a share of all hours in the month."
               >
-              <div className="marginal-note">{marginal?.note}</div>
+              <div className="marginal-note">
+                Hourly marginal-technology history in this sample store runs from {marginalAvailability?.start ?? "N/A"} to{" "}
+                {marginalAvailability?.end ?? "N/A"}. {marginal?.note}
+              </div>
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={marginalChartData} margin={chartMargin}>
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
@@ -1071,6 +1099,7 @@ function App() {
             {activeSection === "system" ? (
               <>
                 <ChartShell
+                  className="chart-shell-wide"
                   eyebrow="System context"
                   title="Installed capacity snapshot"
                   copy="Relative installed capacity by technology in the latest available year."
@@ -1093,6 +1122,7 @@ function App() {
                   </div>
                 </ChartShell>
                 <ChartShell
+                  className="chart-shell-wide"
                   eyebrow="Emissions intensity"
                   title="System CO2 intensity"
                   copy="Monthly average system intensity, expressed in tonnes of CO2 equivalent per MWh."

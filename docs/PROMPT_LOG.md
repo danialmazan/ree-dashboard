@@ -39,3 +39,19 @@
 ## 2026-03-27 09:10 Europe/Madrid
 
 - Prompt: "Okay. some changes: - Sometimes the last (top) label of the y axis is cropped in the charts. Fix this ..."
+
+## 2026-03-27 09:37 Europe/Madrid
+
+- Prompt: "a few changes to the dashboard: - Make the balance chart extend to the right using the same width as the 2 charts above in this page ..."
+
+## 2026-03-27 09:45 Europe/Madrid
+
+- Prompt: "expand the sample of data you're using to build the dashboard to cover 2019-2026"
+
+## 2026-03-27 09:53 Europe/Madrid
+
+- Prompt: "there's something wrong with the interconnectors chart. The negative bars seem to be showing the net when it's negative ..."
+
+## 2026-03-27 09:58 Europe/Madrid
+
+- Prompt: "This is still wrong. Imports are the bars above zero ..."

@@ -366,6 +366,11 @@ input {
   color: rgba(247, 251, 255, 0.72);
 }
 
+.availability-note {
+  margin-bottom: 0.85rem;
+  color: rgba(247, 251, 255, 0.72);
+}
+
 .dual-mini-grid {
   display: grid;
   grid-template-columns: minmax(0, 320px) minmax(0, 1fr);

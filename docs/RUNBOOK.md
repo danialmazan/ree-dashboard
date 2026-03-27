@@ -18,6 +18,12 @@ python3 scripts/build_sample_store.py
 
 This writes `backend/data/sample_store.json`.
 
+The generated store contains:
+
+- Monthly sample series from `2019-01-01` through `2026-03-01` for generation, exchanges, balance, capacity, and emissions.
+- Hourly sample series from `2019-01-01T00:00:00` through `2026-03-31T23:00:00` for coverage statistics and marginal technology.
+- Synthetic interconnector gross flows that are useful for UI development but are not historical bilateral REE values.
+
 ## 3. Run the API
 
 ```bash
