@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-09
+
+- Rebuilt the project as REE Dashboard with a static Grid Monitor interface, complete EN/ES UI, real REData monthly generation/demand/capacity/carbon-context data, an OMIE price adapter, strict provenance/validation, token-safe e·sios configuration, and GitHub Pages deployment at `/ree-dashboard/`.
+- Removed the obsolete FastAPI runtime and all synthetic generators; hourly sections now report the missing e·sios token instead of showing invented values.
+- Files changed: source/validation scripts, generated public data, frontend, tests, Pages workflow, README, and runbook.
+- Reproduce: run `npm run data:fetch`, `npm run data:validate`, `python3 -m pytest tests`, and `npm run build`; inspect EN/ES at desktop and 390px.
+
 ## 2026-03-27
 
 - Fixed the interconnector split chart so export bars use their own negative stack instead of sharing the import stack, which makes exports render from zero down to their full absolute magnitude rather than collapsing toward the net line.

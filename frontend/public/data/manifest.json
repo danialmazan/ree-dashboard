@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-09T09:00:50+00:00",
+  "dashboard": {
+    "path": "dashboard.json",
+    "sha256": "e0b05fd250508345270ea5f381e91cdfdd289d457370ce85f65194af435b23f4",
+    "bytes": 268323
+  },
+  "coverage": {
+    "monthly_start": "2019-01",
+    "monthly_end": "2026-09",
+    "hourly_status": "unavailable"
+  }
+}

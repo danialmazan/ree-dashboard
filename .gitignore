@@ -14,6 +14,11 @@ renv/staging/
 
 # ---- Data (usually private / large) ----
 data/
+!frontend/public/data/
+!frontend/public/data/**
+.env
+.env.*
+!.env.example
 
 # ---- Outputs (keep repo clean) ----
 output/

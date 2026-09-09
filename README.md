@@ -1,58 +1,36 @@
-# Spain Electricity Dashboard
+# REE Dashboard
 
-Dark interactive dashboard scaffold for exploring Spain's electricity generation mix, demand, balance, international exchanges, emissions, storage behavior, and marginal-price-setting technology history.
+An English/Spanish static dashboard for exploring Spain's measured electricity generation, demand, installed capacity, carbon-emitting generation share, cross-border flows, and day-ahead market context.
 
-The repo contains:
+Production URL: <https://danielalmazan.com/ree-dashboard/>
 
-- `backend/`: FastAPI API over a generated local analytics store.
-- `frontend/`: React + Vite dashboard UI with dark control-room styling.
-- `scripts/build_sample_store.py`: generates a local sample dataset shaped for REE and OMIE-style ingestion.
-- `docs/RUNBOOK.md`: reproducible local run steps.
+## Data policy
 
-This implementation ships a working local MVP with synthetic precomputed sample data and a canonical technology mapping. The architecture is ready to replace the sample generator with live REE/OMIE ingestion, but the current dashboard should not be read as historical truth.
+- Monthly generation, demand, capacity, and CO2-equivalent classification come from the public REData API.
+- Day-ahead Spanish prices come from OMIE's public `MARGINALPDBC` files.
+- Hourly generation, demand, and border exchanges require a personal e·sios token. Request one from `consultasios@ree.es` and expose it only as `ESIOS_TOKEN` locally or in GitHub Actions.
+- Marginal price-setting technology is never classified after 18 March 2025 because OMIE states that the new bid typology prevents identification after that date.
+- Missing data stays missing. The project contains no synthetic-data generator or fallback.
 
-## Run
+Raw downloads are cached under gitignored `data/raw/`. The browser reads compact validated assets from `frontend/public/data/` and requires no production server.
 
-Single-command local launch:
+## Run locally
 
 ```bash
+npm install --prefix frontend
+npm run data:fetch
+npm run data:validate
 npm start
 ```
 
-This starts both the API and the frontend from the repo root. Stop both with `Ctrl+C`.
+Open <http://127.0.0.1:5173/ree-dashboard/>. Spanish is available at `?lang=es`.
 
-Backend:
-
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cd ..
-python3 scripts/build_sample_store.py
-cd backend
-uvicorn app.main:app --reload
-```
-
-Equivalent repo-root command:
+## Verify
 
 ```bash
-npm run api:dev
+python3 -m unittest discover -s tests
+npm run data:validate
+npm run build
 ```
 
-Frontend:
-
-```bash
-npm run dev
-```
-
-Open `http://localhost:5173`.
-
-This command now works from the repo root. If you prefer, `cd frontend && npm run dev` still works too.
-
-## Current data behavior
-
-- Generation, demand, exchanges, capacity, balance, and emissions are served from a generated local sample store.
-- Interconnector imports/exports are synthetic gross-flow examples constrained to the sample net balance; they are not historical bilateral series.
-- Coverage stats are calculated from hourly sample data that spans `2019-01-01T00:00:00` through `2026-03-31T23:00:00`.
-- Marginal technology is also generated hourly across that same synthetic sample window.
+See [docs/RUNBOOK.md](docs/RUNBOOK.md) for source refresh, token, and deployment details.

@@ -1,88 +1,78 @@
-# Runbook
+# REE Dashboard runbook
 
-## 1. Create backend environment
-
-```bash
-cd /Users/danielalmazan/Projects/codex/test_ree/backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-## 2. Generate the local analytics store
+## 1. Install
 
 ```bash
 cd /Users/danielalmazan/Projects/codex/test_ree
-python3 scripts/build_sample_store.py
+npm install --prefix frontend
 ```
 
-This writes `backend/data/sample_store.json`.
+The local directory may retain its historical name. The product, GitHub repository, and public base path are `ree-dashboard`.
 
-The generated store contains:
+## 2. Configure e·sios
 
-- Monthly sample series from `2019-01-01` through `2026-03-01` for generation, exchanges, balance, capacity, and emissions.
-- Hourly sample series from `2019-01-01T00:00:00` through `2026-03-31T23:00:00` for coverage statistics and marginal technology.
-- Synthetic interconnector gross flows that are useful for UI development but are not historical bilateral REE values.
-
-## 3. Run the API
+Request a personal API token from `consultasios@ree.es`. Never add it to Git.
 
 ```bash
-cd /Users/danielalmazan/Projects/codex/test_ree/backend
-source .venv/bin/activate
-uvicorn app.main:app --reload
+cp .env.example .env
+# Add ESIOS_TOKEN to .env, then:
+set -a
+source .env
+set +a
 ```
 
-API base URL: `http://localhost:8000`
+Add the same value as the `ESIOS_TOKEN` GitHub Actions secret. Without it, the pipeline still publishes verified monthly REData and OMIE data, while hourly modules visibly report `token_required`.
 
-Equivalent repo-root command:
+## 3. Refresh sources
 
 ```bash
-cd /Users/danielalmazan/Projects/codex/test_ree
-npm run api:dev
+npm run data:fetch
+npm run data:validate
 ```
 
-## 3b. Run both services together
+`scripts/ingest_sources.py` requests REData year by year, caches raw replies in `data/raw/`, retrieves the rolling OMIE price window, and writes `frontend/public/data/dashboard.json` plus its checksummed manifest. It never interpolates or synthesizes missing observations.
+
+Useful options:
 
 ```bash
-cd /Users/danielalmazan/Projects/codex/test_ree
+python3 scripts/ingest_sources.py --start-year 2019 --end-year 2026 --omie-days 120
+python3 scripts/ingest_sources.py --skip-omie
+```
+
+If a source schema changes, do not publish. Update its parser and fixture, regenerate, then validate again.
+
+## 4. Develop and test
+
+```bash
 npm start
+python3 -m unittest discover -s tests
+npm run build
 ```
 
-This launches the FastAPI backend and the Vite frontend in one terminal. Stop both with `Ctrl+C`.
+Open `http://127.0.0.1:5173/ree-dashboard/` and `http://127.0.0.1:5173/ree-dashboard/?lang=es`.
 
-## 4. Install frontend dependencies
+Acceptance checks:
 
-```bash
-cd /Users/danielalmazan/Projects/codex/test_ree/frontend
-npm install
+- Generation begins in 2019 and ends at the latest complete REData month.
+- The browser console is clean at desktop and 390px widths.
+- EN/ES labels, tooltips, error states, and source notes switch together.
+- Hourly sections never display generated values when the token/data is absent.
+- Marginal-technology timestamps cannot exceed `2025-03-18T23:00:00+01:00`.
+- Built asset URLs and canonical metadata use `/ree-dashboard/`.
+
+## 5. Publish
+
+The repository must be public and named `danialmazan/ree-dashboard`. GitHub Pages uses GitHub Actions as its source. The daily workflow refreshes, validates, builds, and deploys; failed refreshes do not replace the last successful artifact.
+
+After pushing, verify the workflow and then check both language URLs with a cache-busting query:
+
+```text
+https://danielalmazan.com/ree-dashboard/?v=<commit>
+https://danielalmazan.com/ree-dashboard/?lang=es&v=<commit>
 ```
 
-## 5. Run the dashboard
+Confirm repository sync with `git rev-list --left-right --count origin/main...HEAD`; the expected result is `0 0`.
 
-```bash
-cd /Users/danielalmazan/Projects/codex/test_ree
-npm run dev
-```
+## 6. Recovery
 
-Open `http://localhost:5173`.
-
-Equivalent direct frontend command:
-
-```bash
-cd /Users/danielalmazan/Projects/codex/test_ree/frontend
-npm run dev
-```
-
-## 6. Run tests
-
-```bash
-cd /Users/danielalmazan/Projects/codex/test_ree/backend
-source .venv/bin/activate
-pytest
-```
-
-## 7. Swap sample data for live ingestion later
-
-- Replace generator functions in `backend/app/sample_store.py` with REE/OMIE fetch + normalize steps.
-- Keep the API contracts and technology mapping stable so the frontend can remain unchanged.
-- Rebuild the store with `python3 scripts/build_sample_store.py`.
+If the refresh fails, inspect the Actions log and the cached raw response locally. Do not bypass validation or substitute a sample. GitHub Pages continues serving its last successful deployment.
