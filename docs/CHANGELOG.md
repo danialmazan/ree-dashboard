@@ -4,8 +4,10 @@
 
 - Rebuilt the project as REE Dashboard with a static Grid Monitor interface, complete EN/ES UI, real REData monthly generation/demand/capacity/carbon-context data, an OMIE price adapter, strict provenance/validation, token-safe e·sios configuration, and GitHub Pages deployment at `/ree-dashboard/`.
 - Removed the obsolete FastAPI runtime and all synthetic generators; hourly sections now report the missing e·sios token instead of showing invented values.
+- Recomputed generation shares from component GWh (excluding REData's aggregate total), excluded incomplete current-month observations, and added validation that each monthly mix sums to 100%.
+- Completed live mobile refinements by removing the remaining backdrop blur and preventing the Spanish headline from overflowing at 390px.
 - Files changed: source/validation scripts, generated public data, frontend, tests, Pages workflow, README, and runbook.
-- Reproduce: run `npm run data:fetch`, `npm run data:validate`, `python3 -m pytest tests`, and `npm run build`; inspect EN/ES at desktop and 390px.
+- Reproduce: run `npm run data:fetch`, `npm run data:validate`, `python3 -m unittest discover -s tests`, and `npm run build`; inspect EN/ES at desktop and 390px.
 
 ## 2026-03-27
 

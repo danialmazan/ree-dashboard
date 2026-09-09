@@ -87,6 +87,26 @@ def flatten_redata(payload: dict[str, Any], value_scale: float = 1.0) -> list[di
     return rows
 
 
+def normalize_monthly_rows(
+    rows: list[dict[str, Any]], key: str, last_complete_month: str
+) -> list[dict[str, Any]]:
+    """Remove aggregate/partial rows and calculate honest monthly shares."""
+    complete = [row for row in rows if row["period"] <= last_complete_month]
+    if key == "generation":
+        # REData includes the total beside its components. Its supplied
+        # percentages therefore sum to 50%; derive shares from component GWh.
+        complete = [row for row in complete if row["series"] != "Generación total"]
+        totals: dict[str, float] = defaultdict(float)
+        for row in complete:
+            totals[row["period"]] += row["value"]
+        for row in complete:
+            denominator = totals[row["period"]]
+            row["share"] = round(row["value"] / denominator * 100, 4) if denominator else 0
+    elif key == "capacity":
+        complete = [row for row in complete if row["series"] != "Potencia instalada total"]
+    return complete
+
+
 def fetch_omie_day(day: date) -> list[dict[str, Any]]:
     filename = f"marginalpdbc_{day:%Y%m%d}.1"
     url = f"{OMIE_DOWNLOAD}?{urllib.parse.urlencode({'filename': filename, 'parents': 'marginalpdbc'})}"
@@ -120,10 +140,11 @@ def omie_monthly(days: int, today: date) -> list[dict[str, Any]]:
         for row in fetch_omie_day(current):
             by_month[row["date"][:7]].append(row["price_es_eur_mwh"])
         current += timedelta(days=1)
+    current_month = today.strftime("%Y-%m")
     return [
         {"period": month, "price_es_eur_mwh": round(sum(values) / len(values), 2), "periods": len(values)}
         for month, values in sorted(by_month.items())
-        if values
+        if values and month < current_month
     ]
 
 
@@ -165,6 +186,8 @@ def main() -> None:
     capacity: list[dict[str, Any]] = []
     emissions: list[dict[str, Any]] = []
     source_updates: dict[str, str] = {}
+    today = datetime.now().date()
+    last_complete_month = (today.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
 
     for year in range(args.start_year, args.end_year + 1):
         for key, widget in REDATA_WIDGETS.items():
@@ -173,6 +196,7 @@ def main() -> None:
                 source_updates.get(key, ""), payload["data"]["attributes"].get("last-update", "")
             )
             rows = flatten_redata(payload, 0.001 if key in {"generation", "demand", "emissions_context"} else 1.0)
+            rows = normalize_monthly_rows(rows, key, last_complete_month)
             if key == "generation":
                 generation.extend(rows)
             elif key == "demand":
@@ -187,12 +211,13 @@ def main() -> None:
     if token:
         hourly = {"status": "configured", "catalogue": esios_probe(token), "years": []}
 
-    prices = [] if args.skip_omie else omie_monthly(args.omie_days, datetime.now().date())
+    prices = [] if args.skip_omie else omie_monthly(args.omie_days, today)
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     dashboard = {
         "schema_version": 1,
         "generated_at": generated_at,
         "geography": {"generation": "Spain national", "hourly": "Spanish peninsular system"},
+        "completeness": {"monthly_through": last_complete_month, "partial_months_excluded": True},
         "generation": generation,
         "demand": demand,
         "capacity": capacity,

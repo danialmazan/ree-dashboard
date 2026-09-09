@@ -25,9 +25,21 @@ class IngestionTests(unittest.TestCase):
             {"period": "2025-01", "series": "Eólica", "value": 1.0, "share": 25.0}
         ])
 
+    def test_generation_total_is_excluded_and_shares_are_recomputed(self):
+        module = load_script("ingest_sources.py")
+        rows = [
+            {"period": "2025-01", "series": "Eólica", "value": 30.0, "share": 15.0},
+            {"period": "2025-01", "series": "Solar fotovoltaica", "value": 20.0, "share": 10.0},
+            {"period": "2025-01", "series": "Generación total", "value": 50.0, "share": 100.0},
+            {"period": "2025-02", "series": "Eólica", "value": 1.0, "share": 100.0},
+        ]
+        normalized = module.normalize_monthly_rows(rows, "generation", "2025-01")
+        self.assertEqual(len(normalized), 2)
+        self.assertAlmostEqual(sum(row["share"] for row in normalized), 100.0)
+
     def test_validator_rejects_post_cutoff_marginal_classification(self):
         module = load_script("validate_data.py")
-        payload = {"schema_version": 1, "generation": [{"period": "2019-01", "series": "Eólica", "value": 1}], "hourly": {"status": "unavailable", "years": []}, "marginal_technology": {"cutoff": "2025-03-18T23:00:00+01:00", "rows": [{"timestamp": "2025-03-19T00:00:00+01:00"}]}}
+        payload = {"schema_version": 1, "generation": [{"period": "2019-01", "series": "Eólica", "value": 1, "share": 100}], "hourly": {"status": "unavailable", "years": []}, "marginal_technology": {"cutoff": "2025-03-18T23:00:00+01:00", "rows": [{"timestamp": "2025-03-19T00:00:00+01:00"}]}}
         self.assertIn("marginal technology extends beyond source cutoff", module.validate(payload))
 
 

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,9 @@ def validate(payload: dict) -> list[str]:
         errors.append("generation is empty")
     if any(row.get("period", "") < "2019-01" for row in generation):
         errors.append("generation predates configured coverage")
+    last_complete_month = (datetime.now().date().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+    if any(row.get("period", "") > last_complete_month for row in generation):
+        errors.append("generation contains an incomplete month")
     seen = set()
     for row in generation:
         key = (row.get("period"), row.get("series"))
@@ -28,6 +32,11 @@ def validate(payload: dict) -> list[str]:
         seen.add(key)
         if row.get("value", 0) < 0:
             errors.append(f"negative generation: {key}")
+    shares_by_month: dict[str, float] = {}
+    for row in generation:
+        shares_by_month[row["period"]] = shares_by_month.get(row["period"], 0) + row["share"]
+    if any(abs(total - 100) > 0.05 for total in shares_by_month.values()):
+        errors.append("generation percentages do not sum to 100%")
     cutoff = payload.get("marginal_technology", {}).get("cutoff", "")
     for row in payload.get("marginal_technology", {}).get("rows", []):
         if row.get("timestamp", "") > cutoff:
